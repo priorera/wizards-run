@@ -43,6 +43,12 @@
         let tileSize; 
         let mapWidth = 0; 
         let mapHeight; 
+		
+		// --- NEW VARIABLES FOR FPS CAPPING ---
+		let lastTime = 0;
+		const FPS = 60;
+		const frameInterval = 1000 / FPS;
+		// -------------------------------------
 
         let platforms = []; 
         let disappearingPlatforms = [];
@@ -118,7 +124,7 @@
         // ==========================================
         function updatePhysicsConstants() {
             player.gravity = tileSize * 0.010;
-            player.speed = (unlockedLevels >= 10) ? tileSize * 0.1375 : tileSize * 0.07;
+            player.speed = (unlockedLevels >= 10) ? tileSize * 0.1375 : tileSize * 0.1;
             
             let playerBaseJump = -Math.sqrt(2 * player.gravity * (3.5 * tileSize));
             let extraJump = -Math.sqrt(2 * player.gravity * (4.5 * tileSize));
@@ -634,8 +640,23 @@
             }
         }
 
-        function update() {
-            if (gameState !== "PLAYING") return; 
+		function update(timestamp) {
+			if (gameState !== "PLAYING") return; 
+
+			// --- NEW FRAME CAPPING LOGIC ---
+			// If update() is called manually (without requestAnimationFrame), generate a timestamp
+			if (!timestamp) timestamp = performance.now();
+			
+			let deltaTime = timestamp - lastTime;
+
+			// If it hasn't been long enough since the last frame, skip this loop
+			if (deltaTime < frameInterval) {
+				requestAnimationFrame(update);
+				return;
+			}
+
+			// Update the lastTime, keeping any leftover time so it stays smooth
+			lastTime = timestamp - (deltaTime % frameInterval);
 
 			if (gameMode === "endless") { 
                 if (player.x > highestEndlessX) {
