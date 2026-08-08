@@ -356,8 +356,12 @@
 				
 				let spikeW = tileSize * 0.5;
 				let spikeH = tileSize * 0.15;
+				
+				// Randomly select a tile index along the platform width, avoiding the outer edges
+				let randomIdx = Math.floor(Math.random() * (cp.wGrids - 2)) + 1;
+
 				let sItem = { 
-					x: cp.plat.x + tileSize + (tileSize - spikeW) / 2, 
+					x: cp.plat.x + (randomIdx * tileSize) + (tileSize - spikeW) / 2, 
 					y: cp.plat.y - spikeH, 
 					width: spikeW, 
 					height: spikeH 
