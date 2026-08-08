@@ -1279,14 +1279,27 @@
                 ctx.fillText(`Enemies Defeated: ${endlessEnemiesDefeated} (Record: ${endlessEnemiesHighScore})`, canvas.width - 480, 90); 
             }
 
-            let activePowers = [];
-            if (player.hasLevitation) activePowers.push("🪄 Levitation Active");
-            if (player.hasFireball) activePowers.push(`🔥 Fireball Ready (${controlMap.fire})`);
-            if (player.deathRayUses > 0) activePowers.push(`⚡ Death Ray Uses: ${player.deathRayUses} (${controlMap.deathRay})`);
-            if (unlockedLevels >= 50) activePowers.push(`🌀 Blink Ready (${controlMap.blink})`);
+			let activePowers = [];
+            if (player.hasLevitation) activePowers.push({ img: images.potionJump, text: `Levitation Active` });
+            if (player.hasFireball) activePowers.push({ img: images.scrollFire, text: `Fireball Ready (${controlMap.fire})` });
+            if (player.deathRayUses > 0) activePowers.push({ img: images.scrollDeathRay, text: `Death Ray Uses: ${player.deathRayUses} (${controlMap.deathRay})` });
+            if (unlockedLevels >= 50) activePowers.push({ img: null, text: `🌀 Blink Ready (${controlMap.blink})` }); // Keep emoji or add an icon if available
 
-            for(let i=0; i<activePowers.length; i++){
-                ctx.fillText(activePowers[i], 20, canvas.height - 30 - (i * 30));
+            let iconSize = 24;
+            let spacing = 30;
+
+            for (let i = 0; i < activePowers.length; i++) {
+                let yPos = canvas.height - 30 - (i * spacing);
+                let xPos = 20;
+
+                // Draw the PNG logo if available and loaded, otherwise skip layout shift
+                let powerObj = activePowers[i];
+                if (powerObj.img && powerObj.img.complete && powerObj.img.width > 0) {
+                    ctx.drawImage(powerObj.img, xPos, yPos - 20, iconSize, iconSize);
+                    ctx.fillText(powerObj.text, xPos + iconSize + 10, yPos);
+                } else {
+                    ctx.fillText(powerObj.text, xPos, yPos);
+                }
             }
             
             ctx.shadowBlur = 0;
