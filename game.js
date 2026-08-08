@@ -118,7 +118,7 @@
         // ==========================================
         function updatePhysicsConstants() {
             player.gravity = tileSize * 0.010;
-            player.speed = (unlockedLevels >= 10) ? tileSize * 0.1375 : tileSize * 0.1;
+            player.speed = (unlockedLevels >= 10) ? tileSize * 0.1375 : tileSize * 0.07;
             
             let playerBaseJump = -Math.sqrt(2 * player.gravity * (3.5 * tileSize));
             let extraJump = -Math.sqrt(2 * player.gravity * (4.5 * tileSize));
