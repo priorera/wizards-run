@@ -167,9 +167,15 @@
         // ==========================================
         // 4. PROCEDURAL LEVEL GENERATOR
         // ==========================================
-        function checkCollision(a, b) {
-            return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y); 
-        }
+		function checkCollision(a, b) {
+			// A small buffer to ignore floating-point rounding errors
+			const epsilon = 0.1; 
+			
+			return (a.x < b.x + b.width - epsilon && 
+					a.x + a.width > b.x + epsilon && 
+					a.y < b.y + b.height - epsilon && 
+					a.y + a.height > b.y + epsilon); 
+		}
 
         function isOccupied(x, y, w, h) {
             let rect = { x, y, width: w, height: h };
