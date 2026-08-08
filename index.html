@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wizard's Run: Goblin Menace</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <div id="game-container"> 
+        <!-- UI Overlays -->
+        <div id="ui-layer"> 
+            <div id="main-menu" class="screen">
+                <h1>Wizard's Run</h1> 
+                <button onclick="startGame('campaign', true)">Start New Campaign</button> 
+                <button onclick="startGame('campaign', false)">Resume Campaign</button> 
+                <button onclick="startGame('endless')">Endless Mode</button> 
+                <button onclick="showPowerups()">View Powerups</button> 
+                <button onclick="showControls()">Controls</button> 
+            </div>
+            
+            <div id="powerups-screen" class="screen hidden">
+                <h1>Unlocked Powerups</h1>
+                <div id="powerup-list" class="scrollable-list"></div>
+                <button onclick="showMainMenu()">Back</button>
+            </div>
+
+            <div id="controls-screen" class="screen hidden">
+                <h1>Game Controls</h1>
+                <div id="controls-list"></div>
+                <p class="hint">Click a button above and press a key to rebind.</p>
+                <button onclick="showMainMenu()">Back</button>
+            </div>
+
+            <div id="pause-menu" class="screen hidden">
+                <h1>Paused</h1>
+                <button onclick="resumeGame()">Resume</button>
+                <button onclick="showMainMenu()">Main Menu</button>
+            </div>
+
+            <div id="game-over" class="screen hidden"> 
+                <h1 id="go-title">Game Over</h1> 
+                <p id="go-stats"></p> 
+                <button onclick="showMainMenu()">Main Menu</button> 
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script src="game.js"></script> 
+</body>
+</html>
