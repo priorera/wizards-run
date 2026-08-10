@@ -404,7 +404,7 @@
             let currentGridX = 5; 
             
             if (gameMode === "campaign") { 
-                let numChunks = 3 + Math.floor(currentLevel / 5); 
+                let numChunks = 2; 
                 let difficulty = Math.min(0.2 + (currentLevel * 0.02), 0.8); 
                 let isBossLevel = (currentLevel % 5 === 0) || currentLevel === MAX_LEVELS; 
 
