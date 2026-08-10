@@ -692,7 +692,7 @@
             // Player Shooting 
             if (keys.fire && player.hasFireball && player.fireCooldown <= 0) { 
                 let dir = player.lastFacingDir;
-                let fSize = unlockedLevels >= 20 ? tileSize * 0.5 : tileSize * 0.25;
+                let fSize = unlockedLevels >= 20 ? tileSize * 0.4 : tileSize * 0.25;
                 let vShot = tileSize * 0.2;
                 
                 fireballs.push({ x: player.x + (player.width/2), y: player.y + (player.height/2), vx: vShot * dir, vy: 0, width: fSize, height: fSize, freeze: false }); 
