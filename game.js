@@ -689,18 +689,26 @@
             if (player.fireCooldown > 0) player.fireCooldown--; 
             if (player.invincibilityTimer > 0) player.invincibilityTimer--; 
 
-            // Player Shooting 
+			// Player Shooting 
             if (keys.fire && player.hasFireball && player.fireCooldown <= 0) { 
                 let dir = player.lastFacingDir;
-                let fSize = unlockedLevels >= 20 ? tileSize * 0.4 : tileSize * 0.25;
+                let fSize = unlockedLevels >= 20 ? tileSize * 0.5 : tileSize * 0.25;
                 let vShot = tileSize * 0.2;
                 
-                fireballs.push({ x: player.x + (player.width/2), y: player.y + (player.height/2), vx: vShot * dir, vy: 0, width: fSize, height: fSize, freeze: false }); 
+                // Spawn cleanly in front of the player and vertically centered
+                let spawnX = player.x + (player.width / 2) + (dir > 0 ? player.width * 0.5 : -player.width * 0.5 - fSize);
+                let spawnY = player.y + (player.height / 2) - (fSize / 2);
+
+                fireballs.push({ x: spawnX, y: spawnY, vx: vShot * dir, vy: 0, width: fSize, height: fSize, freeze: false }); 
                 
                 if (unlockedLevels >= 30) {
                     let diagV = vShot * 0.707;
-                    fireballs.push({ x: player.x + (player.width/2), y: player.y + (player.height/2), vx: diagV * dir, vy: -diagV, width: tileSize * 0.25, height: tileSize * 0.25, freeze: true });
-                    fireballs.push({ x: player.x + (player.width/2), y: player.y + (player.height/2), vx: diagV * dir, vy: diagV, width: tileSize * 0.25, height: tileSize * 0.25, freeze: true });
+                    let icicleSize = tileSize * 0.25;
+                    let iSpawnX = player.x + (player.width / 2) + (dir > 0 ? player.width * 0.5 : -player.width * 0.5 - icicleSize);
+                    let iSpawnY = player.y + (player.height / 2) - (icicleSize / 2);
+
+                    fireballs.push({ x: iSpawnX, y: iSpawnY, vx: diagV * dir, vy: -diagV, width: icicleSize, height: icicleSize, freeze: true });
+                    fireballs.push({ x: iSpawnX, y: iSpawnY, vx: diagV * dir, vy: diagV, width: icicleSize, height: icicleSize, freeze: true });
                 }
                 
                 player.fireCooldown = 20; 
@@ -794,7 +802,7 @@
             for (let i = fireballs.length - 1; i >= 0; i--) { 
                 let f = fireballs[i]; 
                 f.x += f.vx; f.y += f.vy; 
-                createParticles(f.x, f.y + 5, f.freeze ? "#00FFFF" : "#FFA500", 1); 
+                createParticles(f.x + f.width / 2, f.y + f.height / 2 + 5, f.freeze ? "#00FFFF" : "#FFA500", 1);
                 
                 let hit = false; 
                 for (let p of platforms) if (checkCollision(f, p)) hit = true; 
@@ -833,7 +841,7 @@
             for (let i = enemyFireballs.length - 1; i >= 0; i--) {
                 let f = enemyFireballs[i];
                 f.x += f.vx; f.y += f.vy;
-                createParticles(f.x, f.y + 5, "#FF0000", 1);
+                createParticles(f.x + f.width / 2, f.y + f.height / 2 + 5, "#FF0000", 1);
                 
                 let hit = false;
                 for (let p of platforms) if (checkCollision(f, p)) hit = true;
@@ -900,10 +908,14 @@
                     let targetVx = (dist > 0) ? e.speed : -e.speed;
                     setEnemyVx(e, targetVx);
 
-                    if (e.type === "boss") {
+					if (e.type === "boss") {
                         if (e.fireCooldown <= 0) {
                             let dirX = (dist > 0) ? 1 : -1;
-                            enemyFireballs.push({ x: e.x + (e.width/2), y: e.y + (e.height/2), vx: tileSize * 0.15 * dirX, vy: 0, width: tileSize * 0.375, height: tileSize * 0.375 });
+                            let ebSize = tileSize * 0.375;
+                            let ebSpawnX = e.x + (e.width / 2) + (dirX > 0 ? e.width * 0.5 : -e.width * 0.5 - ebSize);
+                            let ebSpawnY = e.y + (e.height / 2) - (ebSize / 2);
+
+                            enemyFireballs.push({ x: ebSpawnX, y: ebSpawnY, vx: tileSize * 0.15 * dirX, vy: 0, width: ebSize, height: ebSize });
                             e.fireCooldown = 90 - Math.min(60, (currentLevel || bossesDefeated)); 
                         } else {
                             e.fireCooldown--;
@@ -1231,19 +1243,19 @@
                 ctx.filter = "none";
             }
 
-            // Fireballs
-            for (let f of fireballs) { 
-                ctx.fillStyle = f.freeze ? "#00FFFF" : "#FF4500"; 
-                ctx.beginPath(); 
-                ctx.arc(f.x, f.y, f.width/2, 0, Math.PI*2); 
-                ctx.fill(); 
-            }
-            for (let f of enemyFireballs) { 
-                ctx.fillStyle = "#FF0000"; 
-                ctx.beginPath(); 
-                ctx.arc(f.x, f.y, f.width/2, 0, Math.PI*2); 
-                ctx.fill(); 
-            }
+			// Fireballs
+			for (let f of fireballs) { 
+				ctx.fillStyle = f.freeze ? "#00FFFF" : "#FF4500"; 
+				ctx.beginPath(); 
+				ctx.arc(f.x + f.width / 2, f.y + f.height / 2, f.width / 2, 0, Math.PI*2); 
+				ctx.fill(); 
+			}
+			for (let f of enemyFireballs) { 
+				ctx.fillStyle = "#FF0000"; 
+				ctx.beginPath(); 
+				ctx.arc(f.x + f.width / 2, f.y + f.height / 2, f.width / 2, 0, Math.PI*2); 
+				ctx.fill(); 
+			}
 
             // Particles
             for (let p of particles) { 
