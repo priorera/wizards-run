@@ -70,13 +70,14 @@
         // ==========================================
         const images = {
             wizard: new Image(), goblin: new Image(), rockThrowerGoblin: new Image(), stoneBrick: new Image(),
-            portal: new Image(), orcBoss: new Image(), potionJump: new Image(),
+            goblinShaman: new Image(), portal: new Image(), orcBoss: new Image(), potionJump: new Image(),
             scrollFire: new Image(), amuletShield: new Image(), background: new Image(),
             healthPotion: new Image(), scrollDeathRay: new Image(),
             spikes: new Image(), shieldGlow: new Image(), disappearingPlatform: new Image()
         };
         images.wizard.src = "assets/wizard.png";
         images.goblin.src = "assets/goblin.png";
+		images.goblinShaman.src = "assets/goblin_shaman.png"
 		images.rockThrowerGoblin.src = "assets/rock_thrower_goblin.png";
         images.stoneBrick.src = "assets/stone_brick.png";
         images.portal.src = "assets/portal.png";
@@ -337,12 +338,17 @@
 						let speedMult = gameMode === "campaign" ? (1 + (currentLevel * 0.05)) : (1 + (bossesDefeated * 0.15));
 						let enemySize = tileSize * 0.75;
                         
-                        // DETERMINE ENEMY TYPE BASED ON YOUR CONDITIONS
+                        // NEW: Determine spawning requirements for both advanced goblins
                         let currentDistanceMeters = Math.floor(highestEndlessX / (tileSize / 4));
-                        let canSpawnRockThrower = (gameMode === "campaign" && currentLevel > 5) || (gameMode === "endless" && currentDistanceMeters > 1000);
+                        let canSpawnRockThrower = (gameMode === "campaign" && currentLevel > 10) || (gameMode === "endless" && currentDistanceMeters > 1000);
+                        let canSpawnShaman = (gameMode === "campaign" && currentLevel > 20) || (gameMode === "endless" && currentDistanceMeters > 2000);
+                        
                         let enemyType = "goblin";
                         
-                        if (canSpawnRockThrower && Math.random() < 0.5) {
+                        // Give a 33% chance to spawn a Shaman if eligible, otherwise check Rock Thrower
+                        if (canSpawnShaman && Math.random() < 0.33) {
+                            enemyType = "shaman";
+                        } else if (canSpawnRockThrower && Math.random() < 0.5) {
                             enemyType = "rockThrower";
                         }
 
@@ -354,18 +360,18 @@
 							vx: tileSize * 0.05 * speedMult, 
 							speed: tileSize * 0.05 * speedMult, 
 							hp: 1, 
-							type: enemyType, // DYNAMIC ENEMY TYPE
+							type: enemyType, 
 							jumpPower: enemyJumpPower, 
 							grounded: false, 
 							vy: 0, 
 							dirChangeCooldown: 0,
-                            fireCooldown: 0 // Initialize cooldown for rock throwers
+                            fireCooldown: 0 
 						};
 						if (!isOccupied(goblinItem.x, goblinItem.y, goblinItem.width, goblinItem.height)) {
 							enemies.push(goblinItem);
 						}
 					}
-                }
+				}
 
                 createdPlatforms.push(cpObj);
                 currentGridX += platWGrids;
@@ -537,18 +543,25 @@
         // ==========================================
         // 6. SPECIAL ABILITIES LOGIC
         // ==========================================
-        function doBlink() {
+		function doBlink() {
             let maxDist = 10 * tileSize; 
             let hitIdx = 10;
 
+            // NEW: Combine standard platforms and currently visible disappearing platforms
+            let activeDisappearing = disappearingPlatforms.filter(dp => dp.alpha > 0);
+            let allPlats = platforms.concat(activeDisappearing);
+
             for (let i = 1; i <= 10; i++) {
                 let testX = player.x + i * tileSize * player.lastFacingDir;
-                let hitWall = platforms.some(p => testX + player.width > p.x && testX < p.x + p.width && player.y + player.height > p.y && player.y < p.y + p.height);
+                
+                // NEW: Check 'allPlats' instead of just 'platforms'
+                let hitWall = allPlats.some(p => testX + player.width > p.x && testX < p.x + p.width && player.y + player.height > p.y && player.y < p.y + p.height);
                 let hitEnemy = enemies.some(e => testX + player.width > e.x && testX < e.x + e.width && player.y + player.height > e.y && player.y < e.y + e.height);
                 let isPit = false;
                 
                 if (player.grounded) {
-                    let hasFloor = platforms.some(p => testX + player.width > p.x && testX < p.x + p.width && player.y + player.height <= p.y && p.y - (player.y + player.height) < tileSize);
+                    // NEW: Check 'allPlats' for floors too
+                    let hasFloor = allPlats.some(p => testX + player.width > p.x && testX < p.x + p.width && player.y + player.height <= p.y && p.y - (player.y + player.height) < tileSize);
                     if (!hasFloor) isPit = true;
                 }
 
@@ -558,7 +571,8 @@
             }
 
             if (hitIdx < 10) {
-                let safeIdx = Math.max(0, hitIdx - 3);
+                // FIX: Changed from (hitIdx - 3) to (hitIdx - 1) to remove padding
+                let safeIdx = Math.max(0, hitIdx - 1);
                 player.x += safeIdx * tileSize * player.lastFacingDir;
             } else {
                 player.x += maxDist * player.lastFacingDir;
@@ -963,7 +977,7 @@
                             let rSpawnY = e.y + (e.height / 2) - (rockSize / 2);
 
                             // Arc calculation: horizontal speed, and initial upward vertical speed
-                            let throwVx = tileSize * 0.15 * dirX;
+                            let throwVx = tileSize * 0.10 * dirX;
                             let throwVy = -tileSize * 0.22; // Throws upwards to arc
 
                             enemyFireballs.push({ 
@@ -973,10 +987,34 @@
                                 isRock: true // Flag this as a rock so gravity affects it
                             });
 
-                            // Base 2 seconds = 120 frames (at 60 FPS)
+                            // Base 3 seconds = 180 frames (at 60 FPS)
                             // Reduce cooldown as difficulty increases
                             let difficultyReduction = Math.min(60, (gameMode === "campaign" ? currentLevel * 2 : bossesDefeated * 5));
-                            e.fireCooldown = 120 - difficultyReduction; 
+                            e.fireCooldown = 180 - difficultyReduction; 
+                        } else {
+                            e.fireCooldown--;
+                        }
+                    }
+					
+					// NEW: SHAMAN LOGIC
+                    if (e.type === "shaman") {
+                        if (e.fireCooldown <= 0) {
+                            let dirX = (dist > 0) ? 1 : -1;
+                            let fSize = tileSize * 0.25;
+                            let fSpawnX = e.x + (e.width / 2) + (dirX > 0 ? e.width * 0.5 : -e.width * 0.5 - fSize);
+                            let fSpawnY = e.y + (e.height / 2) - (fSize / 2);
+
+                            enemyFireballs.push({ 
+                                x: fSpawnX, y: fSpawnY, 
+                                vx: tileSize * 0.10 * dirX, vy: 0, // Straight fireball, no arc
+                                width: fSize, height: fSize,
+                                isRock: false // Ensures it acts as a normal fireball without gravity
+                            });
+
+                            // Base 3 seconds = 180 frames (at 60 FPS)
+                            // Reduce cooldown as difficulty increases
+                            let difficultyReduction = Math.min(60, (gameMode === "campaign" ? currentLevel * 2 : bossesDefeated * 5));
+                            e.fireCooldown = 180 - difficultyReduction; 
                         } else {
                             e.fireCooldown--;
                         }
@@ -1285,7 +1323,8 @@
             for (let e of enemies) { 
                 let img = images.goblin;
                 if (e.type === "boss") img = images.orcBoss;
-                else if (e.type === "rockThrower") img = images.rockThrowerGoblin; // Assign new image
+                else if (e.type === "rockThrower") img = images.rockThrowerGoblin; 
+                else if (e.type === "shaman") img = images.goblinShaman; // NEW: Assign Shaman image
                 
                 if (e.frozenTimer > 0) ctx.filter = "sepia(100%) hue-rotate(180deg)"; 
 
@@ -1300,8 +1339,8 @@
                     }
                     ctx.restore();
                 } else {
-                    // Fallback colors if images fail to load
-                    ctx.fillStyle = e.type === "boss" ? "#006400" : (e.type === "rockThrower" ? "#556B2F" : "#32CD32"); 
+                    // NEW: Added "#FF4500" (OrangeRed) fallback color for Shaman
+                    ctx.fillStyle = e.type === "boss" ? "#006400" : (e.type === "rockThrower" ? "#556B2F" : (e.type === "shaman" ? "#FF4500" : "#32CD32")); 
                     ctx.fillRect(e.x, e.y, e.width, e.height); 
                 }
                 ctx.filter = "none";
