@@ -4,24 +4,12 @@
         // ==========================================
         // 1. GAME STATE, COOKIES, & UI VARIABLES
         // ==========================================
-        function setCookie(name, value, days) {
-            let expires = "";
-            if (days) {
-                let date = new Date();
-                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+		function setCookie(name, value, days) {
+            localStorage.setItem(name, value);
         }
+        
         function getCookie(name) {
-            let nameEQ = name + "=";
-            let ca = document.cookie.split(';');
-            for (let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
+            return localStorage.getItem(name);
         }
 
         let gameState = "MENU"; 
@@ -36,7 +24,7 @@
 		let returnToPause = false;
 
         const MAX_LEVELS = 50; 
-        let lives = 3; 
+        let lives = 5; 
         let score = 0; 
         let highestEndlessX = 0; 
 
@@ -1608,7 +1596,7 @@
             gameMode = mode; 
             gameState = "PLAYING"; 
             hideAllScreens(); 
-            lives = 3; 
+            lives = 5; 
             score = 0; 
             highestEndlessX = 0; 
             bossesDefeated = 0;
@@ -1621,8 +1609,12 @@
             } else {
                 if (forceNew) {
                     currentLevel = 1;
+					unlockedLevels = 1;
+					setCookie("wizardUnlocked", 1, 365);
                     campaignPowerups = [];
                 } else {
+					let savedLevel = parseInt(getCookie("wizardUnlocked"));
+					unlockedLevels = !isNaN(savedLevel) ? savedLevel : 1;
                     currentLevel = unlockedLevels;
                 }
             }
