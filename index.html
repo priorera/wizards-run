@@ -8,56 +8,50 @@
 </head>
 <body>
     <div id="game-container"> 
-        <!-- UI Overlays -->
         <div id="ui-layer"> 
             <div id="main-menu" class="screen">
                 <h1>Wizard's Run</h1> 
                 <button onclick="startGame('campaign', true)">Start New Campaign</button> 
                 <button onclick="startGame('campaign', false)">Resume Campaign</button> 
                 <button onclick="startGame('endless')">Endless Mode</button> 
-                <button onclick="showPowerups()">View Powerups</button> 
+                <button onclick="showPowerups()">View Powerups/Menagerie</button> 
                 <button onclick="showControls()">Controls</button> 
             </div>
             
-			<!-- Inside #powerups-screen -->
+			<!-- Inside the #powerups-screen container -->
 			<div id="powerups-screen" class="screen hidden">
 				<h1>Powerups Directory</h1>
-				
-				<!-- Tab Navigation -->
 				<div class="powerup-tabs">
 					<button class="tab-btn active" onclick="switchPowerupTab('campaign')">Campaign Powerups</button>
 					<button class="tab-btn" onclick="switchPowerupTab('gameplay')">Gameplay Powerups</button>
+					<button class="tab-btn" onclick="switchPowerupTab('menagerie')">Goblin Menagerie</button>
 				</div>
-
-				<!-- Campaign Powerups Tab Content -->
 				<div id="campaign-powerups-tab" class="powerup-tab-content">
 					<div id="powerup-list" class="scrollable-list"></div>
 				</div>
-
-				<!-- Gameplay Powerups Tab Content -->
 				<div id="gameplay-powerups-tab" class="powerup-tab-content hidden">
 					<div id="gameplay-powerup-list" class="scrollable-list"></div>
 				</div>
-
+				<div id="menagerie-tab" class="powerup-tab-content hidden">
+					<div id="menagerie-list" class="scrollable-list"></div>
+				</div>
 				<button onclick="goBackFromSubmenu()">Back</button>
 			</div>
 
-			<!-- Inside #controls-screen -->
-			<div id="controls-screen" class="screen hidden">
-				<h1>Game Controls</h1>
-				<div id="controls-list"></div>
-				<p class="hint">Click a button above and press a key to rebind.</p>
-				<button onclick="goBackFromSubmenu()">Back</button>
-			</div>
+            <div id="controls-screen" class="screen hidden">
+                <h1>Game Controls</h1>
+                <div id="controls-list"></div>
+                <p class="hint">Click a button above and press a key to rebind.</p>
+                <button onclick="goBackFromSubmenu()">Back</button>
+            </div>
 
-			<!-- Inside #pause-menu -->
-			<div id="pause-menu" class="screen hidden">
-				<h1>Paused</h1>
-				<button onclick="resumeGame()">Resume</button>
-				<button onclick="showPowerups(true)">View Powerups</button>
-				<button onclick="showControls(true)">Controls</button>
-				<button onclick="showMainMenu()">Main Menu</button>
-			</div>
+            <div id="pause-menu" class="screen hidden">
+                <h1>Paused</h1>
+                <button onclick="resumeGame()">Resume</button>
+                <button onclick="showPowerups(true)">View Powerups/Menagerie</button>
+                <button onclick="showControls(true)">Controls</button>
+                <button onclick="showMainMenu()">Main Menu</button>
+            </div>
 
             <div id="game-over" class="screen hidden"> 
                 <h1 id="go-title">Game Over</h1> 
@@ -65,10 +59,8 @@
                 <button onclick="showMainMenu()">Main Menu</button> 
             </div>
         </div>
-
         <canvas id="gameCanvas"></canvas>
     </div>
-
     <script src="game.js"></script> 
 </body>
 </html>
