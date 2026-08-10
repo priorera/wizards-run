@@ -33,6 +33,7 @@
         let endlessEnemiesHighScore = parseInt(getCookie("wizardEndlessEnemiesHighScoreRecord")) || 0;
         let bossesDefeated = 0;
 		let endlessBossesSpawned = 0;
+		let returnToPause = false;
 
         const MAX_LEVELS = 50; 
         let lives = 3; 
@@ -68,7 +69,7 @@
         // 2. ASSET SETUP
         // ==========================================
         const images = {
-            wizard: new Image(), goblin: new Image(), stoneBrick: new Image(),
+            wizard: new Image(), goblin: new Image(), rockThrowerGoblin: new Image(), stoneBrick: new Image(),
             portal: new Image(), orcBoss: new Image(), potionJump: new Image(),
             scrollFire: new Image(), amuletShield: new Image(), background: new Image(),
             healthPotion: new Image(), scrollDeathRay: new Image(),
@@ -76,6 +77,7 @@
         };
         images.wizard.src = "assets/wizard.png";
         images.goblin.src = "assets/goblin.png";
+		images.rockThrowerGoblin.src = "assets/rock_thrower_goblin.png";
         images.stoneBrick.src = "assets/stone_brick.png";
         images.portal.src = "assets/portal.png";
         images.orcBoss.src = "assets/orc_boss.png";
@@ -334,6 +336,16 @@
 					for (let idx of spikeIndices) {
 						let speedMult = gameMode === "campaign" ? (1 + (currentLevel * 0.05)) : (1 + (bossesDefeated * 0.15));
 						let enemySize = tileSize * 0.75;
+                        
+                        // DETERMINE ENEMY TYPE BASED ON YOUR CONDITIONS
+                        let currentDistanceMeters = Math.floor(highestEndlessX / (tileSize / 4));
+                        let canSpawnRockThrower = (gameMode === "campaign" && currentLevel > 5) || (gameMode === "endless" && currentDistanceMeters > 1000);
+                        let enemyType = "goblin";
+                        
+                        if (canSpawnRockThrower && Math.random() < 0.5) {
+                            enemyType = "rockThrower";
+                        }
+
 						let goblinItem = { 
 							x: cpObj.plat.x + idx * tileSize, 
 							y: cpObj.plat.y - enemySize, 
@@ -342,11 +354,12 @@
 							vx: tileSize * 0.05 * speedMult, 
 							speed: tileSize * 0.05 * speedMult, 
 							hp: 1, 
-							type: "goblin", 
+							type: enemyType, // DYNAMIC ENEMY TYPE
 							jumpPower: enemyJumpPower, 
 							grounded: false, 
 							vy: 0, 
-							dirChangeCooldown: 0 
+							dirChangeCooldown: 0,
+                            fireCooldown: 0 // Initialize cooldown for rock throwers
 						};
 						if (!isOccupied(goblinItem.x, goblinItem.y, goblinItem.width, goblinItem.height)) {
 							enemies.push(goblinItem);
@@ -837,11 +850,19 @@
                 if (hit || Math.abs(f.x - camera.x) > (tileSize * 50)) fireballs.splice(i, 1); 
             }
 
-            // Enemy Fireballs
+			// Enemy Fireballs & Rocks
             for (let i = enemyFireballs.length - 1; i >= 0; i--) {
                 let f = enemyFireballs[i];
+                
+                // NEW: Apply gravity if the projectile is a rock
+                if (f.isRock) {
+                    f.vy += player.gravity;
+                }
+
                 f.x += f.vx; f.y += f.vy;
-                createParticles(f.x + f.width / 2, f.y + f.height / 2 + 5, "#FF0000", 1);
+                
+                // Rocks emit gray particles, fireballs emit red particles
+                createParticles(f.x + f.width / 2, f.y + f.height / 2 + 5, f.isRock ? "#808080" : "#FF0000", 1);
                 
                 let hit = false;
                 for (let p of platforms) if (checkCollision(f, p)) hit = true;
@@ -916,14 +937,53 @@
                             let ebSpawnY = e.y + (e.height / 2) - (ebSize / 2);
 
                             enemyFireballs.push({ x: ebSpawnX, y: ebSpawnY, vx: tileSize * 0.15 * dirX, vy: 0, width: ebSize, height: ebSize });
-                            e.fireCooldown = 90 - Math.min(60, (currentLevel || bossesDefeated)); 
+							
+							let bossDifficulty = gameMode === "campaign" ? currentLevel : bossesDefeated;
+                            e.fireCooldown = 90 - Math.min(60, bossDifficulty); 
+                        } else {
+                            e.fireCooldown--;
+                        }
+
+                        // NEW: BOSS JUMPING LOGIC
+                        if (e.grounded) {
+                            // If the player is on a higher platform, or randomly (to clear gaps/pressure the player)
+                            if (player.y < e.y - tileSize || Math.random() < 0.03) {
+                                e.vy = e.jumpPower;
+                                e.grounded = false;
+                            }
+                        }
+                    }
+
+                    // NEW: ROCK THROWER LOGIC
+                    if (e.type === "rockThrower") {
+                        if (e.fireCooldown <= 0) {
+                            let dirX = (dist > 0) ? 1 : -1;
+                            let rockSize = tileSize * 0.25;
+                            let rSpawnX = e.x + (e.width / 2) + (dirX > 0 ? e.width * 0.5 : -e.width * 0.5 - rockSize);
+                            let rSpawnY = e.y + (e.height / 2) - (rockSize / 2);
+
+                            // Arc calculation: horizontal speed, and initial upward vertical speed
+                            let throwVx = tileSize * 0.15 * dirX;
+                            let throwVy = -tileSize * 0.22; // Throws upwards to arc
+
+                            enemyFireballs.push({ 
+                                x: rSpawnX, y: rSpawnY, 
+                                vx: throwVx, vy: throwVy, 
+                                width: rockSize, height: rockSize,
+                                isRock: true // Flag this as a rock so gravity affects it
+                            });
+
+                            // Base 2 seconds = 120 frames (at 60 FPS)
+                            // Reduce cooldown as difficulty increases
+                            let difficultyReduction = Math.min(60, (gameMode === "campaign" ? currentLevel * 2 : bossesDefeated * 5));
+                            e.fireCooldown = 120 - difficultyReduction; 
                         } else {
                             e.fireCooldown--;
                         }
                     }
 
                     e.vy = e.vy === undefined ? 0 : e.vy + player.gravity;
-                    e.x += e.vx; 
+                    e.x += e.vx;
 
                     let activeDisappearing = disappearingPlatforms.filter(dp => dp.alpha > 0);
                     let allPlats = platforms.concat(activeDisappearing);
@@ -1155,14 +1215,14 @@
                 ctx.stroke();
             }
 
-            // Platforms
+			// Platforms
             for (let p of platforms) { 
                 for(let w = 0; w < p.width; w += tileSize) {
                     let drawW = Math.min(tileSize, p.width - w);
                     for(let h = 0; h < p.height; h += tileSize) {
                         let drawH = Math.min(tileSize, p.height - h);
                         if (images.stoneBrick.complete && images.stoneBrick.width > 0) {
-                            ctx.drawImage(images.stoneBrick, 0, 0, drawW, drawH, p.x + w, p.y + h, drawW, drawH);
+                            ctx.drawImage(images.stoneBrick, p.x + w, p.y + h, drawW, drawH);
                         } else {
                             ctx.fillStyle = "#4a4a4a"; 
                             ctx.fillRect(p.x + w, p.y + h, drawW, drawH);
@@ -1221,9 +1281,12 @@
                 }
             }
 
-            // Enemies
+			// Enemies
             for (let e of enemies) { 
-                let img = e.type === "boss" ? images.orcBoss : images.goblin;
+                let img = images.goblin;
+                if (e.type === "boss") img = images.orcBoss;
+                else if (e.type === "rockThrower") img = images.rockThrowerGoblin; // Assign new image
+                
                 if (e.frozenTimer > 0) ctx.filter = "sepia(100%) hue-rotate(180deg)"; 
 
                 if (img.complete && img.width > 0) {
@@ -1237,7 +1300,8 @@
                     }
                     ctx.restore();
                 } else {
-                    ctx.fillStyle = e.type === "boss" ? "#006400" : "#32CD32"; 
+                    // Fallback colors if images fail to load
+                    ctx.fillStyle = e.type === "boss" ? "#006400" : (e.type === "rockThrower" ? "#556B2F" : "#32CD32"); 
                     ctx.fillRect(e.x, e.y, e.width, e.height); 
                 }
                 ctx.filter = "none";
@@ -1251,7 +1315,7 @@
 				ctx.fill(); 
 			}
 			for (let f of enemyFireballs) { 
-				ctx.fillStyle = "#FF0000"; 
+				ctx.fillStyle = f.isRock ? "#808080" : "#FF0000"; // Gray for rocks, red for fireballs
 				ctx.beginPath(); 
 				ctx.arc(f.x + f.width / 2, f.y + f.height / 2, f.width / 2, 0, Math.PI*2); 
 				ctx.fill(); 
@@ -1319,7 +1383,7 @@
             }
 
 			let activePowers = [];
-            if (player.hasLevitation) activePowers.push({ img: images.potionJump, text: `Levitation Active` });
+            if (player.hasLevitation) activePowers.push({ img: images.potionJump, text: `Levitation Active (Hold Jump to Slowfall)` });
             if (player.hasFireball) activePowers.push({ img: images.scrollFire, text: `Fireball Ready (${controlMap.fire})` });
             if (player.deathRayUses > 0) activePowers.push({ img: images.scrollDeathRay, text: `Death Ray Uses: ${player.deathRayUses} (${controlMap.deathRay})` });
             if (unlockedLevels >= 50) activePowers.push({ img: null, text: `🌀 Blink Ready (${controlMap.blink})` }); // Keep emoji or add an icon if available
@@ -1357,30 +1421,99 @@
             document.getElementById("main-menu").classList.remove("hidden"); 
         }
 
-        function showPowerups() {
-            hideAllScreens();
-            document.getElementById("powerups-screen").classList.remove("hidden");
-            const list = document.getElementById("powerup-list");
-            
-            const powers = [
-                { lvl: 10, title: "10% Movement Speed", desc: "Increases the player movement speed by 10% permanently." },
-                { lvl: 20, title: "Large Fireballs", desc: "Doubles the size of the player's fireballs permanently." },
-                { lvl: 30, title: "Unlock Icicles", desc: "Shoots two icicles at 45 degree angles that freeze enemies for 1s." },
-                { lvl: 40, title: "33% Jump Height", desc: "Increases the player base jump height by 33% permanently." },
-                { lvl: 50, title: "Unlock Blink", desc: "Instantly teleport safely forward 10 squares." }
-            ];
+		// Add tab switching logic
+		function switchPowerupTab(tabName) {
+			const campaignTab = document.getElementById("campaign-powerups-tab");
+			const gameplayTab = document.getElementById("gameplay-powerups-tab");
+			const buttons = document.querySelectorAll(".powerup-tabs button");
 
-            list.innerHTML = "";
-            powers.forEach(p => {
-                let isUnlocked = unlockedLevels >= p.lvl;
-                let div = document.createElement("div");
-                div.className = "powerup-item" + (isUnlocked ? "" : " locked");
-                div.innerHTML = `<h3>Level ${p.lvl}: ${p.title} ${isUnlocked ? "✅" : "🔒"}</h3>
-                                 <p>${p.desc}</p>
-                                 <small>${isUnlocked ? "Unlocked!" : "Reach Campaign Level " + p.lvl + " to earn."}</small>`;
-                list.appendChild(div);
-            });
-        }
+			buttons.forEach(btn => btn.classList.remove("active"));
+
+			if (tabName === "campaign") {
+				campaignTab.classList.remove("hidden");
+				gameplayTab.classList.add("hidden");
+				buttons[0].classList.add("active");
+			} else {
+				campaignTab.classList.add("hidden");
+				gameplayTab.classList.remove("hidden");
+				buttons[1].classList.add("active");
+			}
+		}
+
+		// Update showPowerups to populate both lists
+		function showPowerups(fromPause = false) {
+			returnToPause = fromPause;
+			hideAllScreens();
+			document.getElementById("powerups-screen").classList.remove("hidden");
+			
+			// Default back to the campaign tab when opening
+			switchPowerupTab('campaign');
+
+			const list = document.getElementById("powerup-list");
+			
+			const powers = [
+				{ lvl: 10, title: "10% Movement Speed", desc: "Increases the player movement speed by 10% permanently." },
+				{ lvl: 20, title: "Large Fireballs", desc: "Doubles the size of the player's fireballs permanently." },
+				{ lvl: 30, title: "Unlock Icicles", desc: "Shoots two icicles at 45 degree angles that freeze enemies for 1s." },
+				{ lvl: 40, title: "33% Jump Height", desc: "Increases the player base jump height by 33% permanently." },
+				{ lvl: 50, title: "Unlock Blink", desc: "Instantly teleport safely forward 10 squares." }
+			];
+
+			list.innerHTML = "";
+			powers.forEach(p => {
+				let isUnlocked = unlockedLevels >= p.lvl;
+				let div = document.createElement("div");
+				div.className = "powerup-item" + (isUnlocked ? "" : " locked");
+				div.innerHTML = `<h3>Level ${p.lvl}: ${p.title} ${isUnlocked ? "✅" : "🔒"}</h3>
+								 <p>${p.desc}</p>
+								 <small>${isUnlocked ? "Unlocked!" : "Reach Campaign Level " + p.lvl + " to earn."}</small>`;
+				list.appendChild(div);
+			});
+
+			// Populate Gameplay Powerups list
+			const gameplayList = document.getElementById("gameplay-powerup-list");
+			gameplayList.innerHTML = "";
+
+			const gameplayPowers = [
+				{ 
+					imgs: ["assets/potion_jump.png"], 
+					desc: "When the Levitation spell is picked up, the wizard gains the ability to jump higher. The wizard also gains the ability to \"slow fall\" if they hold down the jump button after they jump." 
+				},
+				{ 
+					imgs: ["assets/amulet_shield.png", "assets/shield_glow.png"], 
+					desc: "When the amulet is picked up, a protective shield is placed around the wizard that protects the wizard from one hit of damage from either a trap or an enemy." 
+				},
+				{ 
+					imgs: ["assets/scroll_fire.png"], 
+					desc: "When the Fire Scroll is picked up, the wizard gains the ability to shoot a Fireball to attack enemies." 
+				},
+				{ 
+					imgs: ["assets/scroll_deathray.png"], 
+					desc: "When the Death Ray is picked up, the wizard gains up to three charges of the Death Ray spell. The Death Ray instantly kills any enemies visible to the player." 
+				},
+				{ 
+					imgs: ["assets/health_potion.png"], 
+					desc: "+1 Life" 
+				}
+			];
+
+			gameplayPowers.forEach(gp => {
+				let itemDiv = document.createElement("div");
+				itemDiv.className = "gameplay-powerup-item";
+				
+				let iconsHtml = `<div class="icon-container">`;
+				gp.imgs.forEach(imgSrc => {
+					iconsHtml += `<img src="${imgSrc}" alt="Powerup Icon">`;
+				});
+				iconsHtml += `</div>`;
+				
+				itemDiv.innerHTML = `
+					${iconsHtml}
+					<p>${gp.desc}</p>
+				`;
+				gameplayList.appendChild(itemDiv);
+			});
+		}
 
         function renderControlsMenu() {
             const list = document.getElementById("controls-list");
@@ -1412,12 +1545,25 @@
             }
         }
 
-        function showControls() {
-            hideAllScreens();
-            document.getElementById("controls-screen").classList.remove("hidden");
-            awaitingKeybind = null;
-            renderControlsMenu();
-        }
+		// Update showControls to accept the flag
+		function showControls(fromPause = false) {
+			returnToPause = fromPause;
+			hideAllScreens();
+			document.getElementById("controls-screen").classList.remove("hidden");
+			awaitingKeybind = null;
+			renderControlsMenu();
+		}
+		
+		// Add this new function to handle dynamic backing out of submenus
+		function goBackFromSubmenu() {
+			hideAllScreens();
+			if (returnToPause) {
+				document.getElementById("pause-menu").classList.remove("hidden");
+				gameState = "PAUSED";
+			} else {
+				showMainMenu();
+			}
+		}
 
         function startGame(mode, forceNew = false) {
             gameMode = mode; 
