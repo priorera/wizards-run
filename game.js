@@ -647,7 +647,7 @@ function breakShield() {
     
     if (player.hasShatter) {
         player.hasShatter = false;
-        enemyFireballs = []; 
+        enemyFireballs.length = 0;
         for (let e of enemies) {
             let dx = e.x - player.x;
             let dy = e.y - player.y;
@@ -894,7 +894,6 @@ function update(timestamp) {
         if (checkCollision(player, s) && player.invincibilityTimer <= 0) {
             if (player.hasShield) {
                 breakShield();
-				if (enemyFireballs.length === 0) break;
             } else {
                 handlePlayerDeath();
                 requestAnimationFrame(update);
@@ -992,6 +991,7 @@ function update(timestamp) {
     // Enemy Fireballs
     for (let i = enemyFireballs.length - 1; i >= 0; i--) {
         let f = enemyFireballs[i];
+		if (!f) break;
         if (globalFreezeTimer <= 0) {
             if (f.isRock) f.vy += player.gravity;
             f.x += f.vx; f.y += f.vy;
