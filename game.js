@@ -894,6 +894,7 @@ function update(timestamp) {
         if (checkCollision(player, s) && player.invincibilityTimer <= 0) {
             if (player.hasShield) {
                 breakShield();
+				if (enemyFireballs.length === 0) break;
             } else {
                 handlePlayerDeath();
                 requestAnimationFrame(update);
