@@ -18,25 +18,24 @@
                 <button onclick="showControls()">Controls</button> 
             </div>
             
-			<!-- Inside the #powerups-screen container -->
-			<div id="powerups-screen" class="screen hidden">
-				<h1>Powerups Directory</h1>
-				<div class="powerup-tabs">
-					<button class="tab-btn active" onclick="switchPowerupTab('campaign')">Campaign Powerups</button>
-					<button class="tab-btn" onclick="switchPowerupTab('gameplay')">Gameplay Powerups</button>
-					<button class="tab-btn" onclick="switchPowerupTab('menagerie')">Goblin Menagerie</button>
-				</div>
-				<div id="campaign-powerups-tab" class="powerup-tab-content">
-					<div id="powerup-list" class="scrollable-list"></div>
-				</div>
-				<div id="gameplay-powerups-tab" class="powerup-tab-content hidden">
-					<div id="gameplay-powerup-list" class="scrollable-list"></div>
-				</div>
-				<div id="menagerie-tab" class="powerup-tab-content hidden">
-					<div id="menagerie-list" class="scrollable-list"></div>
-				</div>
-				<button onclick="goBackFromSubmenu()">Back</button>
-			</div>
+            <div id="powerups-screen" class="screen hidden">
+                <h1>Powerups Directory</h1>
+                <div class="powerup-tabs">
+                    <button class="tab-btn active" onclick="switchPowerupTab('campaign')">Campaign Powerups</button>
+                    <button class="tab-btn" onclick="switchPowerupTab('gameplay')">Gameplay Powerups</button>
+                    <button class="tab-btn" onclick="switchPowerupTab('menagerie')">Goblin Menagerie</button>
+                </div>
+                <div id="campaign-powerups-tab" class="powerup-tab-content">
+                    <div id="powerup-list" class="scrollable-list"></div>
+                </div>
+                <div id="gameplay-powerups-tab" class="powerup-tab-content hidden">
+                    <div id="gameplay-powerup-list" class="scrollable-list"></div>
+                </div>
+                <div id="menagerie-tab" class="powerup-tab-content hidden">
+                    <div id="menagerie-list" class="scrollable-list"></div>
+                </div>
+                <button onclick="goBackFromSubmenu()">Back</button>
+            </div>
 
             <div id="controls-screen" class="screen hidden">
                 <h1>Game Controls</h1>
@@ -53,9 +52,17 @@
                 <button onclick="showMainMenu()">Main Menu</button>
             </div>
 
+            <div id="level-completed" class="screen hidden">
+                <h1 id="lc-title">Level Completed!</h1>
+                <p id="lc-stats"></p>
+                <button onclick="startGame('campaign', false)">Continue</button>
+                <button onclick="showMainMenu()">Main Menu</button>
+            </div>
+
             <div id="game-over" class="screen hidden"> 
                 <h1 id="go-title">Game Over</h1> 
                 <p id="go-stats"></p> 
+				<button onclick="startGame('campaign', false)">Continue</button>
                 <button onclick="showMainMenu()">Main Menu</button> 
             </div>
         </div>
