@@ -160,10 +160,10 @@ const theDesertPathwayGrid = [
     "........................................................................................................................................................................................................QQQQQQQQQQ",
     "............................h...........................................................................................................................................................................QQQQQQQQQQ",
     "............................QQQQ.......................j...........................b........................................s................................................................QQ.........QQQQQQQQQQ",
-    ".....................................................QQQQQ...........QQQQ........QQQQQ......QQQQ............................QQQQ...........................................s.................QQ.........QQQQQQQQQQ",
+    "........................t............................QQQQQ...........QQQQ........QQQQQ......QQQQ............................QQQQ...........................................s.................QQ.........QQQQQQQQQQ",
     "........................Q..........................................................................................................................................QQQQQ...Q.............Q...QQ.........QQQQQQQQQQ",
     ".......................QQ.........Q....................s.G.......................................................................QQ..........................................................QQ.........QQQQQQQQQQ",
-    "......................QQQ.........Q...........QQ.....QQQQQ..........Q.....QQ...QQQQ..QQQ..............QQ.................QQ......QQ......................Q......Q........Q.....QQ.......QQ...QQ....P....QQQQQQQQQQ",
+    "................f.....QQQ.........Q...........QQ.....QQQQQ..........Q.....QQ...QQQQ..QQQ..............QQ.................QQ......QQ......................Q......Q........Q.....QQ.......QQ...QQ....P....QQQQQQQQQQ",
     "..W............QQQ...QQQQ........QQQ..........QQ..........................QQ..........................QQ...........G.....QQ..QQ..QQ......................Q.....................QQ............QQ.........QQQQQQQQQQ",
     "...................GQQQQQ.......GQQQ......G.G.QQ...........G.G....G.G.G.G.QQ...........G.G.G.........GQQ.........GQQ...G.QQ..QQ..QQ.....G.............R..Q.......G.G....R.R....QQ.......G..R.QQ...QQQ...QQQQQQQQQQ",
     "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ....QQQQQQQQQ...QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ...QQQQQQQQQQ..QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ",
@@ -1161,8 +1161,9 @@ function breakShield() {
             let dist = Math.hypot(dx, dy) || 1;
             let pushForce = tileSize * 0.5;
             e.vx = (dx / dist) * pushForce;
-            e.vy = (dy / dist) * pushForce - tileSize * 0.1;
+            e.vy = (dy / dist) * pushForce - tileSize * 0.15;
             e.grounded = false;
+            e.knockbackTimer = 35; // Stun AI briefly for powerful knockback
         }
         createParticles(player.x, player.y, "#ffffff", 50);
     }
@@ -1424,17 +1425,20 @@ function update(timestamp) {
         }
     }
 
-    if (!wasGrounded && player.grounded && player.hasShockwaveBoots && keys.down) {
-        for (let e of enemies) {
-            let dist = Math.abs(e.x - player.x);
-            if (dist < tileSize * 8 && Math.abs(e.y - player.y) < tileSize * 4) {
-                e.vx = (e.x > player.x ? 1 : -1) * tileSize * 0.4;
-                e.vy = -tileSize * 0.2;
-                e.grounded = false;
-            }
-        }
-        createParticles(player.x + player.width/2, player.y + player.height, "#8B4513", 30);
-    }
+	// Inside update(), where boots shockwave is checked:
+	if (!wasGrounded && player.grounded && player.hasShockwaveBoots && keys.down) {
+		for (let e of enemies) {
+			let dist = Math.abs(e.x - player.x);
+			if (dist < tileSize * 8 && Math.abs(e.y - player.y) < tileSize * 4) {
+				let pushDir = (e.x > player.x ? 1 : -1);
+				e.vx = pushDir * tileSize * 0.4;
+				e.vy = -tileSize * 0.25;
+				e.grounded = false;
+				e.knockbackTimer = 30; // Stun AI briefly to allow smooth knockback
+			}
+		}
+		createParticles(player.x + player.width/2, player.y + player.height, "#8B4513", 30);
+	}
 
     for (let dp of disappearingPlatforms) {
         if (dp.triggered) {
@@ -1551,12 +1555,14 @@ function update(timestamp) {
     }
 
 	let stompedThisFrame = false;
-    for (let i = enemies.length - 1; i >= 0; i--) { 
+	for (let i = enemies.length - 1; i >= 0; i--) { 
         let e = enemies[i]; 
 
         if (e.dirChangeCooldown === undefined) e.dirChangeCooldown = 0;
         if (e.dirChangeCooldown > 0) e.dirChangeCooldown--;
         if (e.frozenTimer > 0) e.frozenTimer--;
+        if (e.knockbackTimer === undefined) e.knockbackTimer = 0;
+        if (e.knockbackTimer > 0) e.knockbackTimer--;
 
         // --- ENEMY ANIMATION UPDATE ---
         if (e.vx !== 0) {
@@ -1587,7 +1593,8 @@ function update(timestamp) {
                 if (Math.abs(dist) < (tileSize * 25) && Math.abs(player.y - e.y) < (tileSize * 20)) e.aggro = true;
             }
             
-            if (e.aggro) {
+            // Only apply standard AI movement if NOT currently knocked back
+            if (e.knockbackTimer <= 0 && e.aggro) {
                 let targetVx = (dist > 0) ? e.speed : -e.speed;
                 setEnemyVx(e, targetVx);
 
@@ -1627,38 +1634,44 @@ function update(timestamp) {
                         }
                     } else { e.fireCooldown--; }
                 }
+            }
 
-                e.vy = e.vy === undefined ? 0 : e.vy + player.gravity;
-                e.x += e.vx;
+            e.vy = e.vy === undefined ? 0 : e.vy + player.gravity;
+            e.x += e.vx;
 
-                let activeDisappearing = disappearingPlatforms.filter(dp => dp.alpha > 0);
-                let allPlats = platforms.concat(activeDisappearing);
+            let activeDisappearing = disappearingPlatforms.filter(dp => dp.alpha > 0);
+            let allPlats = platforms.concat(activeDisappearing);
 
-                for (let p of allPlats) { 
-                    if (checkCollision(e, p)) { 
-                        if (e.vx > 0) e.x = p.x - e.width; 
-                        else if (e.vx < 0) e.x = p.x + p.width; 
-                        if (e.grounded) { e.vy = e.jumpPower; e.grounded = false; }
+            for (let p of allPlats) { 
+                if (checkCollision(e, p)) { 
+                    if (e.vx > 0) e.x = p.x - e.width; 
+                    else if (e.vx < 0) e.x = p.x + p.width; 
+                    
+                    // Soft bounce off walls during knockback instead of abrupt stop
+                    if (e.knockbackTimer > 0) {
+                        e.vx = -e.vx * 0.3;
+                    } else if (e.grounded) { 
+                        e.vy = e.jumpPower; e.grounded = false; 
                     }
                 }
+            }
 
-                e.y += e.vy; e.grounded = false;
-                let hasFloorUnderneath = false;
-                let aheadX = e.x + (e.vx > 0 ? e.width + (tileSize * 0.25) : 0);
+            e.y += e.vy; e.grounded = false;
+            let hasFloorUnderneath = false;
+            let aheadX = e.x + (e.vx > 0 ? e.width + (tileSize * 0.25) : 0);
 
-                for (let p of allPlats) { 
-                    if (checkCollision(e, p)) { 
-                        if (e.vy > 0) { e.y = p.y - e.height; e.vy = 0; e.grounded = true; } 
-                        else if (e.vy < 0) { e.y = p.y + p.height; e.vy = 0; }
-                    }
-                    if (aheadX > p.x - 2 && aheadX < p.x + p.width + 2 && e.y + e.height <= p.y && p.y - (e.y + e.height) < tileSize) {
-                        hasFloorUnderneath = true;
-                    }
+            for (let p of allPlats) { 
+                if (checkCollision(e, p)) { 
+                    if (e.vy > 0) { e.y = p.y - e.height; e.vy = 0; e.grounded = true; } 
+                    else if (e.vy < 0) { e.y = p.y + p.height; e.vy = 0; }
                 }
-
-                if (e.grounded && !hasFloorUnderneath && e.type !== "boss") {
-                    e.x -= e.vx; setEnemyVx(e, -e.vx);
+                if (aheadX > p.x - 2 && aheadX < p.x + p.width + 2 && e.y + e.height <= p.y && p.y - (e.y + e.height) < tileSize) {
+                    hasFloorUnderneath = true;
                 }
+            }
+
+            if (e.knockbackTimer <= 0 && e.grounded && !hasFloorUnderneath && e.type !== "boss") {
+                e.x -= e.vx; setEnemyVx(e, -e.vx);
             }
         } else {
             e.vy = e.vy === undefined ? 0 : e.vy + player.gravity;
