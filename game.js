@@ -592,7 +592,7 @@ function updatePhysicsConstants() {
     let extraJump = -Math.sqrt(2 * player.gravity * (4.5 * tileSize));
     
     player.jumpPower = (hasCampaignUnlock("The Tundra Castle") || player.hasLevitation) ? extraJump : playerBaseJump;
-    enemyJumpPower = -Math.sqrt(2 * player.gravity * (2.4 * tileSize)); 
+    enemyJumpPower = -Math.sqrt(2 * player.gravity * (2.0 * tileSize)); 
 }
 
 function resizeCanvas() {
